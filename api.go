@@ -1,18 +1,18 @@
 package factom_raw
 
 import (
-"encoding/hex"
+	"encoding/hex"
 
-"github.com/FactomProject/factom"
-"github.com/FactomProject/factomd/common/adminBlock"
-"github.com/FactomProject/factomd/common/directoryBlock"
-"github.com/FactomProject/factomd/common/entryBlock"
-"github.com/FactomProject/factomd/common/entryCreditBlock"
-"github.com/FactomProject/factomd/common/factoid"
-"github.com/FactomProject/factomd/common/interfaces"
-"github.com/FactomProject/factomd/common/primitives"
-"github.com/FactomProject/factomd/database/databaseOverlay"
-"github.com/FactomProject/factomd/database/hybridDB"
+	"github.com/FactomProject/factom"
+	"github.com/FactomProject/factomd/common/adminBlock"
+	"github.com/FactomProject/factomd/common/directoryBlock"
+	"github.com/FactomProject/factomd/common/entryBlock"
+	"github.com/FactomProject/factomd/common/entryCreditBlock"
+	"github.com/FactomProject/factomd/common/factoid"
+	"github.com/FactomProject/factomd/common/interfaces"
+	"github.com/FactomProject/factomd/common/primitives"
+	"github.com/FactomProject/factomd/database/databaseOverlay"
+	"github.com/FactomProject/factomd/database/hybridDB"
 )
 
 const level string = "level"
@@ -67,7 +67,10 @@ func (a *APIReader) FetchEntry(hash interfaces.IHash) (interfaces.IEBEntry, erro
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToEntry(raw)
+
+	entry := entryBlock.NewEntry()
+	err = UnmarshalGeneric(entry, raw)
+	return entry, err
 }
 
 func (a *APIReader) FetchEBlock(hash interfaces.IHash) (interfaces.IEntryBlock, error) {
@@ -75,7 +78,10 @@ func (a *APIReader) FetchEBlock(hash interfaces.IHash) (interfaces.IEntryBlock, 
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToEblock(raw)
+
+	block := entryBlock.NewEBlock()
+	err = UnmarshalGeneric(block, raw)
+	return block, err
 }
 
 func (a *APIReader) FetchDBlockHead() (interfaces.IDirectoryBlock, error) {
@@ -87,7 +93,10 @@ func (a *APIReader) FetchDBlockHead() (interfaces.IDirectoryBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToDblock(raw)
+
+	block := directoryBlock.NewDirectoryBlock(nil)
+	err = UnmarshalGeneric(block, raw)
+	return block, err
 }
 
 func (a *APIReader) FetchDBlockByHeight(height uint32) (interfaces.IDirectoryBlock, error) {
@@ -100,7 +109,10 @@ func (a *APIReader) FetchDBlockByHeight(height uint32) (interfaces.IDirectoryBlo
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToDblock(data)
+
+	block := directoryBlock.NewDirectoryBlock(nil)
+	err = UnmarshalGeneric(block, data)
+	return block, err
 }
 
 func (a *APIReader) FetchFBlockByHeight(height uint32) (interfaces.IFBlock, error) {
@@ -113,7 +125,10 @@ func (a *APIReader) FetchFBlockByHeight(height uint32) (interfaces.IFBlock, erro
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToFblock(data)
+
+	block := factoid.NewFBlock(nil)
+	err = UnmarshalGeneric(block, data)
+	return block, err
 }
 
 func (a *APIReader) FetchABlockByHeight(height uint32) (interfaces.IAdminBlock, error) {
@@ -126,7 +141,10 @@ func (a *APIReader) FetchABlockByHeight(height uint32) (interfaces.IAdminBlock, 
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToAblock(data)
+
+	ablock := adminBlock.NewAdminBlock(nil)
+	err = UnmarshalGeneric(ablock, data)
+	return ablock, err
 }
 
 func (a *APIReader) FetchECBlockByHeight(height uint32) (interfaces.IEntryCreditBlock, error) {
@@ -139,7 +157,9 @@ func (a *APIReader) FetchECBlockByHeight(height uint32) (interfaces.IEntryCredit
 	if err != nil {
 		return nil, err
 	}
-	return rawBytesToECblock(data)
+	ecblock := entryCreditBlock.NewECBlock()
+	err = UnmarshalGeneric(ecblock, data)
+	return ecblock, err
 }
 
 func (a *APIReader) FetchHeadIndexByChainID(chainID interfaces.IHash) (interfaces.IHash, error) {
@@ -150,56 +170,10 @@ func (a *APIReader) FetchHeadIndexByChainID(chainID interfaces.IHash) (interface
 	return primitives.HexToHash(resp)
 }
 
-func rawBytesToECblock(raw []byte) (interfaces.IEntryCreditBlock, error) {
-	ecblock := entryCreditBlock.NewECBlock()
-	err := ecblock.UnmarshalBinary(raw)
+func UnmarshalGeneric(i interfaces.BinaryMarshallable, raw []byte) error {
+	err := i.UnmarshalBinary(raw)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return ecblock, nil
-}
-
-func rawBytesToAblock(raw []byte) (interfaces.IAdminBlock, error) {
-	ablock := adminBlock.NewAdminBlock(nil)
-	err := ablock.UnmarshalBinary(raw)
-	if err != nil {
-		return nil, err
-	}
-	return ablock, nil
-}
-
-func rawBytesToFblock(raw []byte) (interfaces.IFBlock, error) {
-	fblock := factoid.NewFBlock(nil)
-	err := fblock.UnmarshalBinary(raw)
-	if err != nil {
-		return nil, err
-	}
-	return fblock, nil
-}
-
-func rawBytesToDblock(raw []byte) (interfaces.IDirectoryBlock, error) {
-	dblock := directoryBlock.NewDirectoryBlock(nil)
-	err := dblock.UnmarshalBinary(raw)
-	if err != nil {
-		return nil, err
-	}
-	return dblock, nil
-}
-
-func rawBytesToEblock(raw []byte) (interfaces.IEntryBlock, error) {
-	eblock := entryBlock.NewEBlock()
-	err := eblock.UnmarshalBinary(raw)
-	if err != nil {
-		return nil, err
-	}
-	return eblock, nil
-}
-
-func rawBytesToEntry(raw []byte) (interfaces.IEntry, error) {
-	entry := entryBlock.NewEntry()
-	err := entry.UnmarshalBinary(raw)
-	if err != nil {
-		return nil, err
-	}
-	return entry, nil
+	return nil
 }
