@@ -29,6 +29,7 @@ type Fetcher interface {
 	FetchABlockByHeight(blockHeight uint32) (interfaces.IAdminBlock, error)
 	FetchFBlockByHeight(blockHeight uint32) (interfaces.IFBlock, error)
 	FetchECBlockByHeight(blockHeight uint32) (interfaces.IEntryCreditBlock, error)
+	FetchECBlock(keymr interfaces.IHash) (interfaces.IEntryCreditBlock, error)
 }
 
 var _ Fetcher = (*APIReader)(nil)
@@ -147,6 +148,15 @@ func (a *APIReader) FetchABlockByHeight(height uint32) (interfaces.IAdminBlock, 
 	return ablock, err
 }
 
+func (a *APIReader) FetchECBlock(keymr interfaces.IHash) (interfaces.IEntryCreditBlock, error) {
+	data, err := factom.GetRaw(keymr.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return rawBytesToECblock(data)
+}
+
 func (a *APIReader) FetchECBlockByHeight(height uint32) (interfaces.IEntryCreditBlock, error) {
 	raw, err := factom.GetBlockByHeightRaw("ec", int64(height))
 	if err != nil {
@@ -157,9 +167,7 @@ func (a *APIReader) FetchECBlockByHeight(height uint32) (interfaces.IEntryCredit
 	if err != nil {
 		return nil, err
 	}
-	ecblock := entryCreditBlock.NewECBlock()
-	err = UnmarshalGeneric(ecblock, data)
-	return ecblock, err
+	return rawBytesToECblock(data)
 }
 
 func (a *APIReader) FetchHeadIndexByChainID(chainID interfaces.IHash) (interfaces.IHash, error) {
@@ -177,3 +185,58 @@ func UnmarshalGeneric(i interfaces.BinaryMarshallable, raw []byte) error {
 	}
 	return nil
 }
+
+func rawBytesToECblock(raw []byte) (interfaces.IEntryCreditBlock, error) {
+	ecblock := entryCreditBlock.NewECBlock()
+	err := ecblock.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return ecblock, nil
+}
+
+func rawBytesToAblock(raw []byte) (interfaces.IAdminBlock, error) {
+	ablock := adminBlock.NewAdminBlock(nil)
+	err := ablock.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return ablock, nil
+}
+
+func rawBytesToFblock(raw []byte) (interfaces.IFBlock, error) {
+	fblock := factoid.NewFBlock(nil)
+	err := fblock.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return fblock, nil
+}
+
+func rawBytesToDblock(raw []byte) (interfaces.IDirectoryBlock, error) {
+	dblock := directoryBlock.NewDirectoryBlock(nil)
+	err := dblock.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return dblock, nil
+}
+
+func rawBytesToEblock(raw []byte) (interfaces.IEntryBlock, error) {
+	eblock := entryBlock.NewEBlock()
+	err := eblock.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return eblock, nil
+}
+
+func rawBytesToEntry(raw []byte) (interfaces.IEntry, error) {
+	entry := entryBlock.NewEntry()
+	err := entry.UnmarshalBinary(raw)
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
